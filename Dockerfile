@@ -3,27 +3,15 @@
 # ============================================================
 FROM maven:3.9.11-eclipse-temurin-17 AS builder
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Root Maven POM
-COPY pom.xml .
+# Copy API Gateway Maven configuration and source
+COPY gwatcho-api-gateway/pom.xml /workspace/api-gateway/pom.xml
+COPY gwatcho-api-gateway/src /workspace/api-gateway/src
 
-# Module POMs
-COPY user-service/pom.xml user-service/pom.xml
-COPY product-service/pom.xml product-service/pom.xml
-COPY order-service/pom.xml order-service/pom.xml
-COPY payment-service/pom.xml payment-service/pom.xml
-COPY delivery-service/pom.xml delivery-service/pom.xml
-COPY api-gateway/pom.xml api-gateway/pom.xml
-
-# Download dependencies
-RUN mvn -pl api-gateway -am dependency:go-offline -B
-
-# Copy only API Gateway source
-COPY api-gateway/src api-gateway/src
-
-# Build API Gateway and required reactor modules
-RUN mvn -pl api-gateway -am clean package -DskipTests
+# Build API Gateway independently
+RUN mvn -B -f /workspace/api-gateway/pom.xml \
+    clean package -DskipTests
 
 
 # ============================================================
@@ -33,7 +21,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY --from=builder /app/api-gateway/target/*.jar app.jar
+COPY --from=builder /workspace/api-gateway/target/*.jar app.jar
 
 EXPOSE 8085
 
